@@ -1,0 +1,435 @@
+// PM Gym - Database Schema
+// Auth & User Management
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified DateTime?
+  password      String?   // null for OAuth users
+  image         String?
+  
+  // Onboarding data
+  role          String?
+  interests     String?   // JSON array stored as string
+  goal          String?
+  
+  // Metadata
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
+  
+  // Relations - Auth
+  accounts      Account[]
+  sessions      Session[]
+  passwordResets PasswordResetToken[]
+  verificationTokens VerificationToken[]
+  
+  // Relations - Progress
+  moduleProgress UserModuleProgress[]
+  lessonProgress UserLessonProgress[]
+  scenarioCompletions UserScenarioCompletion[]
+  quizAttempts  QuizAttempt[]
+  achievements  UserAchievement[]
+  bookmarks     UserResourceBookmark[]
+  activities    UserActivity[]
+  stats         UserStats?
+}
+
+// OAuth accounts (Google, GitHub, etc.)
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// Session management
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Password reset tokens
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  userId    String
+  used      Boolean  @default(false)
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+// Email verification tokens
+model VerificationToken {
+  id         String   @id @default(cuid())
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  userId     String
+  
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([identifier, token])
+}
+
+// ========================================
+// Platform Content Models
+// ========================================
+
+// Learning Modules
+model Module {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String
+  icon        String   // emoji or icon name
+  order       Int      @default(0)
+  difficulty  String   // beginner, intermediate, advanced
+  estimatedHours Float  @default(0)
+  
+  // Content
+  overview    String?  // markdown content
+  objectives  String?  // JSON array
+  prerequisites String? // JSON array
+  
+  // Status
+  published   Boolean  @default(false)
+  featured    Boolean  @default(false)
+  
+  // Metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  sections    Section[]
+  lessons     Lesson[]
+  userProgress UserModuleProgress[]
+  resources   Resource[]
+}
+
+// Module Sections (grouping lessons)
+model Section {
+  id          String   @id @default(cuid())
+  moduleId    String
+  title       String
+  description String?
+  order       Int      @default(0)
+  
+  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  lessons     Lesson[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Individual Lessons
+model Lesson {
+  id          String   @id @default(cuid())
+  moduleId    String
+  sectionId   String?
+  slug        String   @unique
+  
+  title       String
+  description String?
+  content     String   // markdown or JSON content
+  lessonType  String   // text, video, interactive, quiz
+  
+  // Ordering
+  order       Int      @default(0)
+  
+  // Time estimate
+  estimatedMinutes Int @default(0)
+  
+  // Prerequisites
+  prerequisites String? // JSON array of lesson IDs
+  
+  // Status
+  published   Boolean  @default(false)
+  
+  // Metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  section     Section? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  userProgress UserLessonProgress[]
+  quizzes     Quiz[]
+}
+
+// Interactive Scenarios
+model Scenario {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String
+  difficulty  String   // beginner, intermediate, advanced
+  
+  // Content
+  context     String   // JSON: initial situation
+  decisions   String   // JSON: decision tree
+  
+  // Metadata
+  estimatedMinutes Int @default(0)
+  tags        String?  // JSON array
+  
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  completions UserScenarioCompletion[]
+}
+
+// Quizzes
+model Quiz {
+  id          String   @id @default(cuid())
+  lessonId    String
+  title       String
+  description String?
+  questions   String   // JSON array of questions
+  
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  attempts    QuizAttempt[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Resources (templates, tools, guides)
+model Resource {
+  id          String   @id @default(cuid())
+  moduleId    String?
+  
+  title       String
+  description String?
+  type        String   // template, tool, guide, video, article
+  category    String   // analytics, planning, etc.
+  
+  // Content
+  content     String?  // markdown or HTML
+  fileUrl     String?  // download link
+  externalUrl String?  // external link
+  
+  // Metadata
+  tags        String?  // JSON array
+  published   Boolean  @default(true)
+  featured    Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  module      Module?  @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  bookmarks   UserResourceBookmark[]
+}
+
+// Achievements/Badges
+model Achievement {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String
+  icon        String   // emoji or icon
+  category    String   // learning, scenario, streak, social, etc.
+  
+  // Requirements
+  requirements String  // JSON: conditions to unlock
+  
+  // Rarity
+  rarity      String   @default("common") // common, rare, epic, legendary
+  points      Int      @default(0)
+  
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  
+  userAchievements UserAchievement[]
+}
+
+// ========================================
+// User Progress Models
+// ========================================
+
+// Module Progress
+model UserModuleProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  moduleId    String
+  
+  status      String   @default("not_started") // not_started, in_progress, completed
+  progress    Float    @default(0) // 0-100
+  
+  startedAt   DateTime?
+  completedAt DateTime?
+  lastAccessedAt DateTime?
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([userId, moduleId])
+}
+
+// Lesson Progress
+model UserLessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  lessonId    String
+  
+  status      String   @default("not_started") // not_started, in_progress, completed
+  completed   Boolean  @default(false)
+  timeSpent   Int      @default(0) // seconds
+  
+  startedAt   DateTime?
+  completedAt DateTime?
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([userId, lessonId])
+}
+
+// Scenario Completions
+model UserScenarioCompletion {
+  id          String   @id @default(cuid())
+  userId      String
+  scenarioId  String
+  
+  score       Int      // 0-100
+  grade       String   // A, B, C, etc.
+  decisions   String   // JSON: path taken
+  feedback    String?  // JSON: detailed feedback
+  
+  timeSpent   Int      @default(0) // seconds
+  completedAt DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scenario    Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+}
+
+// Quiz Attempts
+model QuizAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  quizId      String
+  
+  answers     String   // JSON: user answers
+  score       Int      // 0-100
+  passed      Boolean  @default(false)
+  
+  completedAt DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+}
+
+// User Achievements
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  
+  unlockedAt    DateTime @default(now())
+  
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, achievementId])
+}
+
+// Resource Bookmarks
+model UserResourceBookmark {
+  id          String   @id @default(cuid())
+  userId      String
+  resourceId  String
+  
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resource    Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, resourceId])
+}
+
+// User Activity Log (for tracking)
+model UserActivity {
+  id          String   @id @default(cuid())
+  userId      String
+  
+  activityType String  // lesson_completed, module_started, etc.
+  entityType   String? // lesson, module, scenario, etc.
+  entityId     String?
+  
+  metadata    String?  // JSON: additional data
+  
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// User Stats (denormalized for performance)
+model UserStats {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  
+  level           Int      @default(1)
+  totalPoints     Int      @default(0)
+  experiencePoints Int     @default(0)
+  
+  modulesCompleted Int     @default(0)
+  lessonsCompleted Int     @default(0)
+  scenariosCompleted Int   @default(0)
+  
+  totalTimeSpent  Int      @default(0) // seconds
+  currentStreak   Int      @default(0) // days
+  longestStreak   Int      @default(0) // days
+  lastActiveDate  DateTime?
+  
+  // Skill levels (0-100)
+  skillAnalytics  Int      @default(0)
+  skillArtifacts  Int      @default(0)
+  skillCollaboration Int   @default(0)
+  skillFrameworks Int      @default(0)
+  skillLifecycle  Int      @default(0)
+  skillStakeholder Int     @default(0)
+  skillAdvanced   Int      @default(0)
+  skillCareer     Int      @default(0)
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

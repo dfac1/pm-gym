@@ -1,0 +1,484 @@
+{
+  "scenarios": [
+    {
+      "id": "retention-falling-case",
+      "title": "Retention падает — разберись в хаосе",
+      "category": "аналитика + приоритизация + управление хаосом",
+      "difficulty": "hard",
+      "estimatedTime": 25,
+      "tags": ["retention", "analytics", "prioritization", "chaos-management"],
+      "description": "SaaS-платформа для онлайн-обучения. D30 retention упал с 38% до 26% за 2 месяца. За это время команда сделала 20 изменений. CEO говорит: 'Retention — это ты'.",
+      
+      "context": {
+        "role": "Product Manager",
+        "company": "SaaS-платформа для онлайн-обучения",
+        "situation": "2 месяца назад D30 retention был 38%. Сейчас — 26%. За последние 8 недель команда сделала множество изменений.",
+        "stakeholders": [
+          {"role": "Маркетинг", "says": "Трафик вырос на 20%"},
+          {"role": "Саппорт", "says": "Больше жалоб на сложность"},
+          {"role": "Инженеры", "says": "Мы много чего релизили"},
+          {"role": "CEO", "says": "Retention — это ты"}
+        ]
+      },
+
+      "changelog": [
+        "Запущен новый onboarding",
+        "Изменена логика рекомендаций курсов",
+        "Добавлен AI-ассистент",
+        "Переписана система уведомлений",
+        "Уменьшен free-период с 14 до 7 дней",
+        "Изменён pricing",
+        "Добавлена годовая подписка",
+        "Обновлён UI главной страницы",
+        "Добавлены push-уведомления",
+        "Убрали обязательный tutorial",
+        "Изменён алгоритм ранжирования контента",
+        "Ускорена загрузка приложения",
+        "Изменена система достижений",
+        "Переписан backend авторизации",
+        "Изменён paywall экран",
+        "Добавлена интеграция с LinkedIn",
+        "Изменена email-стратегия",
+        "Изменён способ создания аккаунта (убрали Google login)",
+        "Обновлён дизайн мобильной версии",
+        "Изменили структуру тарифов"
+      ],
+
+      "metrics": [
+        {"name": "D1 retention", "trend": "down", "severity": "low", "value": "↓ незначительно"},
+        {"name": "D7 retention", "trend": "down", "severity": "high", "value": "↓ сильно"},
+        {"name": "D30 retention", "trend": "down", "severity": "critical", "value": "↓ очень сильно (38% → 26%)"},
+        {"name": "ARPU", "trend": "up", "severity": "positive", "value": "↑"},
+        {"name": "Конверсия в платную подписку", "trend": "up", "severity": "positive", "value": "↑"},
+        {"name": "Количество начатых курсов", "trend": "down", "severity": "medium", "value": "↓"},
+        {"name": "Средняя длина сессии", "trend": "down", "severity": "medium", "value": "↓"},
+        {"name": "Частота заходов", "trend": "up", "severity": "neutral", "value": "↑, но меньше делают"},
+        {"name": "Жалобы", "trend": "up", "severity": "high", "value": "↑ на перегруженность"},
+        {"name": "Отток новых пользователей", "trend": "up", "severity": "critical", "value": "↑ особенно высокий"}
+      ],
+
+      "task": "Ты не можешь делать всё сразу. Тебе нужно выбрать ПЕРВОЕ действие.",
+
+      "options": [
+        {"id": "A", "text": "Срочно вернуть старый onboarding", "type": "emotional-rollback"},
+        {"id": "B", "text": "Откатить pricing", "type": "emotional-rollback"},
+        {"id": "C", "text": "Вернуть Google login", "type": "emotional-rollback"},
+        {"id": "D", "text": "Запустить cohort-анализ по дате релиза изменений", "type": "strategic-strong"},
+        {"id": "E", "text": "Провести user interviews с ушедшими пользователями", "type": "unstructured-research"},
+        {"id": "F", "text": "Запустить A/B старого и нового paywall", "type": "testing"},
+        {"id": "G", "text": "Проверить drop-off по этапам onboarding", "type": "strategic-strong"},
+        {"id": "H", "text": "Проверить поведение пользователей до и после AI-ассистента", "type": "chaotic-analysis"},
+        {"id": "I", "text": "Отключить push-уведомления", "type": "emotional-rollback"},
+        {"id": "J", "text": "Вернуть обязательный tutorial", "type": "emotional-rollback"},
+        {"id": "K", "text": "Проанализировать сегмент 'новые vs старые пользователи'", "type": "strategic-strong"},
+        {"id": "L", "text": "Сравнить retention free vs paid", "type": "analysis"},
+        {"id": "M", "text": "Сделать survey внутри приложения", "type": "unstructured-research"},
+        {"id": "N", "text": "Вернуть старую email-стратегию", "type": "emotional-rollback"},
+        {"id": "O", "text": "Провести performance-аудит", "type": "analysis"},
+        {"id": "P", "text": "Проанализировать first-value-moment", "type": "strategic-strong"},
+        {"id": "Q", "text": "Приоритизировать по ICE все изменения", "type": "analysis"},
+        {"id": "R", "text": "Заморозить новые релизы", "type": "paralysis"},
+        {"id": "S", "text": "Провести корреляционный анализ изменений", "type": "chaotic-analysis"},
+        {"id": "T", "text": "Собрать war-room и остановить все маркетинговые кампании", "type": "emotional-rollback"}
+      ],
+
+      "consequences": {
+        "emotional-rollback": {
+          "type": "weak",
+          "title": "Эмоциональные откаты",
+          "description": "Retention частично улучшается, но ты не понимаешь причину, не знаешь что именно сработало, создаёшь хаос, команда теряет доверие.",
+          "verdict": "Ты лечишь симптомы",
+          "score": 2
+        },
+        "unstructured-research": {
+          "type": "weak",
+          "title": "Исследование без структуры",
+          "description": "Ты получаешь много качественной информации, но медленно, дорого, без гипотез, без количественной проверки.",
+          "verdict": "Ты собираешь шум",
+          "score": 3
+        },
+        "chaotic-analysis": {
+          "type": "medium",
+          "title": "Хаотичный анализ",
+          "description": "Много данных. Нет фокуса. Команда перегружена.",
+          "verdict": "Аналитический паралич",
+          "score": 4
+        },
+        "strategic-strong": {
+          "type": "strong",
+          "title": "Сильный первый шаг",
+          "description": "Ты структурируешь хаос, локализуешь проблему, даёшь направление, уменьшаешь пространство неопределённости.",
+          "verdict": "Системный подход",
+          "score": 8
+        },
+        "testing": {
+          "type": "medium",
+          "title": "Тестирование гипотез",
+          "description": "Хороший шаг, но без анализа данных это может быть преждевременно.",
+          "verdict": "Нужна диагностика первой",
+          "score": 5
+        },
+        "analysis": {
+          "type": "medium",
+          "title": "Анализ",
+          "description": "Полезно, но может быть недостаточно фокусированным.",
+          "verdict": "На правильном пути",
+          "score": 6
+        },
+        "paralysis": {
+          "type": "weak",
+          "title": "Паралич",
+          "description": "Команда парализована. Решений нет. CEO недоволен.",
+          "verdict": "Замерзание под давлением",
+          "score": 1
+        }
+      },
+
+      "bestAnswer": {
+        "optionId": "D",
+        "title": "Cohort-анализ по датам релизов",
+        "reasoning": [
+          "Изменений много — нужно понять, в какой момент началось падение",
+          "Нужно изолировать влияние релизов",
+          "Без этого любое действие — гадание",
+          "Позволяет структурировать хаос и найти точку перелома"
+        ],
+        "nextSteps": [
+          "Сегментация новых пользователей",
+          "Анализ onboarding drop-off",
+          "Анализ first-value-moment"
+        ]
+      },
+
+      "learningGoals": [
+        "Системное мышление",
+        "Умение работать в условиях хаоса",
+        "Способность не паниковать",
+        "Приоритизация",
+        "Аналитическая дисциплина",
+        "Понимание последовательности действий"
+      ]
+    },
+
+    {
+      "id": "roadmap-conflict-case",
+      "title": "Команда спорит про Roadmap, но проблема глубже",
+      "category": "стратегия + влияние + системное мышление",
+      "difficulty": "hard",
+      "estimatedTime": 30,
+      "tags": ["strategy", "influence", "systems-thinking", "b2b"],
+      "description": "Продакт в B2B SaaS для HR-автоматизации. Q3 был провальным: рост замедлился, churn вырос, 2 крупных клиента ушли. CEO требует roadmap.",
+      
+      "context": {
+        "role": "Product Manager",
+        "company": "B2B SaaS для автоматизации HR-процессов",
+        "situation": "Q3 был провальным: рост выручки замедлился, churn вырос, продажи закрываются медленнее, 2 крупных клиента ушли. Команда напряжена.",
+        "stakeholders": [
+          {"role": "Продажи", "says": "Сложнее продавать"},
+          {"role": "Саппорт", "says": "Больше вопросов"},
+          {"role": "Разработка", "says": "Мы перегружены"},
+          {"role": "CEO", "says": "Требует roadmap на квартал"}
+        ]
+      },
+
+      "changelog": [
+        "Добавили AI-модуль оценки кандидатов",
+        "Запустили enterprise-тариф",
+        "Увеличили цены на 18%",
+        "Переписали модуль отчётов",
+        "Перешли на новую CRM",
+        "Добавили 14 новых интеграций",
+        "Сократили команду саппорта",
+        "Перевели часть разработки на аутсорс",
+        "Упростили onboarding",
+        "Убрали 3 редко используемые фичи",
+        "Изменили структуру аккаунтов",
+        "Добавили SSO",
+        "Запустили новый сайт",
+        "Изменили позиционирование на рынке",
+        "Изменили структуру комиссий продаж",
+        "Сменили Head of Sales",
+        "Ускорили релизный цикл",
+        "Добавили usage-based billing",
+        "Перешли на новую аналитику",
+        "Обновили дизайн дашборда"
+      ],
+
+      "metrics": [
+        {"name": "MRR", "trend": "up", "severity": "low", "value": "Растёт медленно"},
+        {"name": "Churn", "trend": "up", "severity": "critical", "value": "↑ особенно у mid-market"},
+        {"name": "Enterprise сегмент", "trend": "up", "severity": "positive", "value": "↑ растёт"},
+        {"name": "Средний чек", "trend": "up", "severity": "positive", "value": "↑"},
+        {"name": "NPS", "trend": "down", "severity": "high", "value": "↓"},
+        {"name": "Цикл продаж", "trend": "up", "severity": "medium", "value": "Продажи закрываются медленнее"},
+        {"name": "Крупные клиенты", "trend": "down", "severity": "critical", "value": "2 крупных клиента ушли"}
+      ],
+
+      "task": "Выбрать ПЕРВОЕ действие для выхода из кризиса.",
+
+      "options": [
+        {"id": "A", "text": "Сфокусироваться на enterprise и забить на mid-market", "type": "impulsive"},
+        {"id": "B", "text": "Вернуть старые цены", "type": "impulsive"},
+        {"id": "C", "text": "Запустить фичи, которые просит Sales", "type": "impulsive"},
+        {"id": "D", "text": "Приоритизировать техдолг", "type": "operational"},
+        {"id": "E", "text": "Провести стратегическую сегментацию клиентов", "type": "strategic-best"},
+        {"id": "F", "text": "Провести интервью с ушедшими mid-market клиентами", "type": "research"},
+        {"id": "G", "text": "Запустить churn-анализ по когортам", "type": "strategic-strong"},
+        {"id": "H", "text": "Заморозить релизы на месяц", "type": "paralysis"},
+        {"id": "I", "text": "Вернуть удалённые фичи", "type": "impulsive"},
+        {"id": "J", "text": "Упростить продукт", "type": "tactical"},
+        {"id": "K", "text": "Проанализировать влияние usage-based billing", "type": "strategic-strong"},
+        {"id": "L", "text": "Провести воркшоп с sales и customer success", "type": "collaborative"},
+        {"id": "M", "text": "Проверить влияние сокращения саппорта", "type": "operational"},
+        {"id": "N", "text": "Провести юнит-экономику по сегментам", "type": "strategic-strong"},
+        {"id": "O", "text": "Отменить AI-модуль", "type": "impulsive"},
+        {"id": "P", "text": "Сделать NPS deep-dive", "type": "research"},
+        {"id": "Q", "text": "Вернуть старый roadmap", "type": "impulsive"},
+        {"id": "R", "text": "Увеличить маркетинговый бюджет", "type": "impulsive"},
+        {"id": "S", "text": "Упростить onboarding", "type": "tactical"},
+        {"id": "T", "text": "Сделать полный продуктовый аудит", "type": "paralysis"}
+      ],
+
+      "consequences": {
+        "impulsive": {
+          "type": "weak",
+          "title": "Импульсивные решения",
+          "description": "Краткосрочные эффекты. Стратегическая неопределённость остаётся. Ты лечишь симптомы.",
+          "verdict": "Реакция вместо стратегии",
+          "score": 2
+        },
+        "paralysis": {
+          "type": "weak",
+          "title": "Слишком широкие действия",
+          "description": "Команда парализована. Решений нет. CEO недоволен.",
+          "verdict": "Анализ вместо действия",
+          "score": 3
+        },
+        "operational": {
+          "type": "medium",
+          "title": "Операционные улучшения",
+          "description": "Полезно, но не решает стратегическую проблему.",
+          "verdict": "Правильное направление, но не первый шаг",
+          "score": 5
+        },
+        "research": {
+          "type": "medium",
+          "title": "Исследование",
+          "description": "Даёт инсайты, но требует времени и может быть недостаточно структурированным.",
+          "verdict": "Полезно, но не самое приоритетное",
+          "score": 6
+        },
+        "tactical": {
+          "type": "medium",
+          "title": "Тактические улучшения",
+          "description": "Может помочь, но без понимания сегментов это выстрел вслепую.",
+          "verdict": "Нужна стратегия сначала",
+          "score": 4
+        },
+        "collaborative": {
+          "type": "medium",
+          "title": "Коллаборативный подход",
+          "description": "Хорошо для alignment, но без данных это будет спором мнений.",
+          "verdict": "Нужны факты первыми",
+          "score": 5
+        },
+        "strategic-strong": {
+          "type": "strong",
+          "title": "Сильное стратегическое направление",
+          "description": "Структурирует проблему, даёт данные для решений.",
+          "verdict": "Системный подход",
+          "score": 8
+        },
+        "strategic-best": {
+          "type": "best",
+          "title": "Оптимальный стратегический шаг",
+          "description": "Создаёт фундамент для всех дальнейших решений. Без сегментации roadmap — гадание.",
+          "verdict": "Стратегическая основа",
+          "score": 10
+        }
+      },
+
+      "bestAnswer": {
+        "optionId": "E",
+        "title": "Стратегическая сегментация клиентов",
+        "reasoning": [
+          "Enterprise растёт, mid-market уходит — нужно понять, кому мы теперь продукт",
+          "Цены менялись, billing менялся, позиционирование менялось",
+          "Кто теряет ценность? Где на самом деле проблема?",
+          "Без сегментации roadmap — это гадание",
+          "Это создаёт фундамент для всех дальнейших решений"
+        ],
+        "nextSteps": [
+          "Churn-анализ по сегментам",
+          "Unit-экономика по сегментам",
+          "Интервью с клиентами каждого сегмента",
+          "Построение сегмент-специфичного roadmap"
+        ]
+      },
+
+      "learningGoals": [
+        "Стратегическое мышление",
+        "Сегментация клиентов",
+        "Управление в кризисе",
+        "Приоритизация под давлением",
+        "Системный анализ проблем"
+      ]
+    },
+
+    {
+      "id": "activation-drop-case",
+      "title": "Рост есть, но активация падает",
+      "category": "Growth + UX + системность",
+      "difficulty": "hard",
+      "estimatedTime": 25,
+      "tags": ["growth", "activation", "ux", "b2c"],
+      "description": "B2C SaaS для тайм-менеджмента. Маркетинг молодцы: трафик ↑40%, регистраций ↑. Но активация ↓, D7 retention ↓, отзывы 'слишком сложно'.",
+      
+      "context": {
+        "role": "Product Manager",
+        "company": "B2C SaaS для тайм-менеджмента",
+        "situation": "Маркетинг молодцы: трафик ↑ 40%, CPI ↓, регистраций ↑. Но: активация ↓, D7 retention ↓, среднее число созданных задач ↓, отзывы 'слишком сложно'.",
+        "stakeholders": []
+      },
+
+      "changelog": [
+        "Добавили премиум-темы",
+        "Добавили AI-планировщик",
+        "Усложнили onboarding",
+        "Добавили tutorial",
+        "Добавили push-напоминания",
+        "Изменили pricing",
+        "Добавили годовой тариф",
+        "Изменили экран создания задачи",
+        "Добавили gamification",
+        "Изменили структуру меню",
+        "Добавили social-sharing",
+        "Добавили 3 новых фичи",
+        "Убрали quick-start режим",
+        "Изменили copy",
+        "Обновили дизайн",
+        "Добавили дополнительные настройки",
+        "Изменили paywall",
+        "Добавили новый dashboard",
+        "Изменили flow регистрации",
+        "Ускорили загрузку"
+      ],
+
+      "metrics": [
+        {"name": "Трафик", "trend": "up", "severity": "positive", "value": "↑ 40%"},
+        {"name": "CPI", "trend": "down", "severity": "positive", "value": "↓"},
+        {"name": "Регистрации", "trend": "up", "severity": "positive", "value": "↑"},
+        {"name": "Активация", "trend": "down", "severity": "critical", "value": "↓"},
+        {"name": "D7 retention", "trend": "down", "severity": "critical", "value": "↓"},
+        {"name": "Среднее число задач", "trend": "down", "severity": "high", "value": "↓"},
+        {"name": "Новые пользователи", "trend": "neutral", "severity": "critical", "value": "Чаще уходят в первые 2 дня"},
+        {"name": "Старые пользователи", "trend": "neutral", "severity": "positive", "value": "Остаются активны"},
+        {"name": "Premium-конверсия", "trend": "up", "severity": "positive", "value": "↑"},
+        {"name": "Complaints", "trend": "up", "severity": "high", "value": "↑ 'слишком сложно'"},
+        {"name": "Usage фич", "trend": "neutral", "severity": "medium", "value": "Распределён неравномерно"}
+      ],
+
+      "task": "Нужно выбрать первый шаг для исправления ситуации.",
+
+      "options": [
+        {"id": "A", "text": "Упростить onboarding", "type": "impulsive"},
+        {"id": "B", "text": "Вернуть quick-start", "type": "impulsive"},
+        {"id": "C", "text": "Убрать AI", "type": "impulsive"},
+        {"id": "D", "text": "Сделать user journey map", "type": "research"},
+        {"id": "E", "text": "Проанализировать first-value-time", "type": "strategic-strong"},
+        {"id": "F", "text": "Сделать A/B упрощённой версии", "type": "testing"},
+        {"id": "G", "text": "Уменьшить количество фич", "type": "tactical"},
+        {"id": "H", "text": "Откатить дизайн", "type": "impulsive"},
+        {"id": "I", "text": "Сегментировать пользователей по источникам трафика", "type": "strategic-strong"},
+        {"id": "J", "text": "Остановить маркетинг", "type": "impulsive"},
+        {"id": "K", "text": "Проверить когортную активацию", "type": "strategic-best"},
+        {"id": "L", "text": "Проанализировать поведение на шаге создания задачи", "type": "strategic-strong"},
+        {"id": "M", "text": "Упростить меню", "type": "tactical"},
+        {"id": "N", "text": "Убрать gamification", "type": "impulsive"},
+        {"id": "O", "text": "Сделать usability-тест", "type": "research"},
+        {"id": "P", "text": "Переписать copy", "type": "impulsive"},
+        {"id": "Q", "text": "Проанализировать drop-off по onboarding", "type": "strategic-strong"},
+        {"id": "R", "text": "Пересмотреть positioning", "type": "strategic"},
+        {"id": "S", "text": "Провести churn-анализ", "type": "research"},
+        {"id": "T", "text": "Сделать feature adoption анализ", "type": "research"}
+      ],
+
+      "consequences": {
+        "impulsive": {
+          "type": "weak",
+          "title": "Импульсные решения",
+          "description": "Действия без диагноза. Можешь сломать что-то ещё.",
+          "verdict": "Выстрелы вслепую",
+          "score": 2
+        },
+        "tactical": {
+          "type": "medium",
+          "title": "Тактические улучшения",
+          "description": "Может помочь, но без понимания root cause это гадание.",
+          "verdict": "Нужна диагностика сначала",
+          "score": 4
+        },
+        "research": {
+          "type": "medium",
+          "title": "Качественное исследование",
+          "description": "Полезная информация, но требует времени и может не показать полную картину.",
+          "verdict": "Хорошо, но не первый шаг",
+          "score": 5
+        },
+        "testing": {
+          "type": "medium",
+          "title": "Тестирование",
+          "description": "Хороший подход, но без анализа текущих данных может быть преждевременно.",
+          "verdict": "Нужны данные первыми",
+          "score": 6
+        },
+        "strategic": {
+          "type": "strong",
+          "title": "Стратегический анализ",
+          "description": "Может быть слишком широко для первого шага.",
+          "verdict": "Хорошее направление",
+          "score": 7
+        },
+        "strategic-strong": {
+          "type": "strong",
+          "title": "Сильный первый шаг",
+          "description": "Фокусированный анализ, который даст конкретные инсайты.",
+          "verdict": "Системный подход",
+          "score": 8
+        },
+        "strategic-best": {
+          "type": "best",
+          "title": "Оптимальный первый шаг",
+          "description": "Позволит понять, проблема в качестве трафика, в продукте или в перегрузе фичами.",
+          "verdict": "Диагностика root cause",
+          "score": 10
+        }
+      },
+
+      "bestAnswer": {
+        "optionId": "K",
+        "title": "Когортный анализ активации по источникам и дате релиза",
+        "reasoning": [
+          "Трафик изменился — источники могли ухудшиться",
+          "UX менялся — фичи добавлялись",
+          "Нужно понять: проблема в качестве трафика? Или в продукте? Или в перегрузе?",
+          "Это позволит изолировать влияние изменений от влияния аудитории"
+        ],
+        "nextSteps": [
+          "Сегментация по источникам трафика",
+          "Анализ onboarding drop-off для проблемных когорт",
+          "Анализ first-value-time",
+          "A/B тестирование упрощённой версии для новых пользователей"
+        ]
+      },
+
+      "learningGoals": [
+        "Growth-аналитика",
+        "Когортный анализ",
+        "Диагностика проблем активации",
+        "Разделение влияния продукта и маркетинга",
+        "Системное мышление в growth"
+      ]
+    }
+  ]
+}
