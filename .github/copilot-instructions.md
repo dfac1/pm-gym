@@ -16,9 +16,9 @@ The Next.js app lives in the `pm-gym/` subdirectory. All code work happens there
 | Language | TypeScript (strict) |
 | Styling | Tailwind CSS v3 |
 | Animation | Framer Motion |
-| Database | SQLite (dev) via Prisma ORM |
+| Database | PostgreSQL via Prisma ORM |
 | Auth | Custom JWT-based auth (bcryptjs + jsonwebtoken) |
-| Email | Nodemailer |
+| Email | Nodemailer / Resend |
 | Validation | Zod v4 |
 | Runtime | Node.js (npm) |
 
@@ -31,26 +31,28 @@ pm-gym/
 ├── app/                  # Next.js App Router pages & API routes
 │   ├── api/auth/         # Login, register, verify-email, forgot/reset password, resend-verification
 │   ├── api/user/         # /me (current user), /onboarding
-│   ├── api/dev/          # Dev-only helpers (get-verification-token)
-│   ├── api/test-db/      # DB connectivity test
 │   ├── dashboard/        # Protected platform pages
 │   ├── modules/          # Learning module pages
 │   ├── scenarios/        # Interactive scenario pages
 │   └── (auth pages)/     # login, register, verify-email, etc.
 ├── components/
+│   ├── AmplitudeProvider.tsx  # Client component - wraps app for page-view tracking
 │   ├── auth/             # AuthLayout, Button, Input, PasswordStrength, SocialAuthButtons
 │   ├── platform/         # PlatformLayout, Sidebar
 │   └── (landing)/        # Hero, Header, Footer, etc.
 ├── lib/
+│   ├── amplitude.ts      # Analytics helpers: initAmplitude(), track(), identifyUser(), resetUser()
 │   ├── auth.ts           # JWT helpers, password hashing, token verification
-│   ├── email.ts          # Nodemailer email sending
+│   ├── email.ts          # Email sending (Nodemailer)
 │   ├── prisma.ts         # Prisma client singleton
 │   └── api.ts            # Shared API utilities
 ├── prisma/
 │   ├── schema.prisma     # Full database schema
 │   └── seed.ts           # Seed script
-└── data/
-    └── scenarios.json    # Static scenario content
+├── public/
+│   └── data/
+│       └── scenarios.json  # Static scenario content
+└── _archive/             # Archived/unused routes (do not edit)
 ```
 
 ---
@@ -92,9 +94,10 @@ export async function POST(req: NextRequest) {
 
 ### Database (Prisma)
 - Import the Prisma client from `lib/prisma.ts` (singleton pattern — do not re-instantiate).
-- JSON array fields (`interests`, `objectives`, etc.) are stored as serialised strings in SQLite — always `JSON.parse()` / `JSON.stringify()` when reading/writing.
+- JSON array fields (`interests`, `objectives`, `prerequisites`, `tags`, `decisions`, etc.) are stored as serialised strings — always `JSON.parse()` / `JSON.stringify()` when reading/writing.
 - Use `cuid()` for all IDs.
-- Always handle `prisma.$disconnect()` is NOT needed per request; the singleton handles it.
+- `prisma.$disconnect()` is NOT needed per request; the singleton handles it.
+- Database is **PostgreSQL** (both dev and prod). Run migrations with `npx prisma migrate dev`.
 
 ### Components
 - Server Components by default; add `'use client'` only when needed (event handlers, hooks, browser APIs).
@@ -109,7 +112,13 @@ export async function POST(req: NextRequest) {
 ### Environment Variables
 - All secrets go in `.env.local` (never committed).
 - Access via `process.env.VARIABLE_NAME`.
-- Required vars: `DATABASE_URL`, `JWT_SECRET`, `SMTP_*` (email), `NEXT_PUBLIC_APP_URL`.
+- Required vars: `DATABASE_URL`, `JWT_SECRET`, `SMTP_*` (email), `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_AMPLITUDE_API_KEY`.
+
+### Analytics (Amplitude)
+- Use `lib/amplitude.ts` helpers: `track(eventName, props)`, `identifyUser(userId, traits)`, `resetUser()`.
+- `AmplitudeProvider` wraps the app and auto-tracks page views — do not add manual page-view calls.
+- Amplitude is only initialised client-side; never call analytics helpers from Server Components or API routes.
+- `NEXT_PUBLIC_AMPLITUDE_API_KEY` must be set; tracking silently no-ops if missing.
 
 ---
 
@@ -118,6 +127,8 @@ export async function POST(req: NextRequest) {
 **Core models:** `User`, `Account`, `Session`, `PasswordResetToken`, `VerificationToken`
 
 **Learning content:** `Module` → `Section` → `Lesson` → `Quiz`
+
+**Resources:** `Resource` (templates, tools, guides, videos, articles — optionally linked to a `Module`)
 
 **Gamification:** `Scenario`, `Achievement`
 
@@ -163,8 +174,9 @@ Key relationships:
 1. **Never expose secrets** in client-side code (`NEXT_PUBLIC_` prefix only for public values).
 2. **Validate all input** on the server with Zod before touching the database.
 3. **Never trust JWT payload alone** — always re-fetch the user from the database when needed for sensitive operations.
-4. **Dev-only routes** (under `app/api/dev/`) must check `NODE_ENV !== 'production'` and return 404 in production.
+4. **Dev-only routes** have been archived into `_archive/` — do not restore or reference them in production code.
 5. **No `console.log` in production paths** — use proper error handling.
 6. **Prisma migrations** are managed via `npx prisma migrate dev`. Do not manually edit migration SQL.
 7. **Run dev server** from inside `pm-gym/`: `npm run dev` (port 3000).
 8. **Seed the database** with `npm run db:seed` from `pm-gym/`.
+9. **Vercel build** runs `npx prisma generate && next build` — always ensure Prisma client is generated before build.
