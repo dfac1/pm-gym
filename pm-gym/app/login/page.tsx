@@ -7,6 +7,7 @@ import AuthLayout from '@/components/auth/AuthLayout'
 import Input from '@/components/auth/Input'
 import Button from '@/components/auth/Button'
 import SocialAuthButtons from '@/components/auth/SocialAuthButtons'
+import { track, identifyUser } from '@/lib/amplitude'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -71,15 +72,21 @@ export default function LoginPage() {
     try {
       const { authApi } = await import('@/lib/api')
       
-      await authApi.login({
+      const response = await authApi.login({
         email: formData.email,
         password: formData.password,
         rememberMe: formData.rememberMe
       })
-      
+
+      if (response.user) {
+        identifyUser(response.user.id, { email: response.user.email, name: response.user.name })
+      }
+      track('User Logged In')
+
       // Redirect to dashboard
       router.push('/dashboard')
     } catch (error: any) {
+      track('Login Failed', { error: error.message })
       setGeneralError(error.message || 'Неверный email или пароль')
     } finally {
       setLoading(false)

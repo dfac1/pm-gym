@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import AmplitudeProvider from '@/components/AmplitudeProvider'
 
 export const metadata: Metadata = {
   title: 'PM Gym — Прокачай продуктовое мышление на практике',
@@ -14,7 +15,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru">
-      <body>{children}</body>
+      <body>
+        <AmplitudeProvider>{children}</AmplitudeProvider>
+      </body>
     </html>
   )
 }

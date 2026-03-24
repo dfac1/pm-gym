@@ -8,6 +8,7 @@ import Input from '@/components/auth/Input'
 import Button from '@/components/auth/Button'
 import SocialAuthButtons from '@/components/auth/SocialAuthButtons'
 import PasswordStrength from '@/components/auth/PasswordStrength'
+import { track } from '@/lib/amplitude'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -92,9 +93,12 @@ export default function RegisterPage() {
         agreeToTerms: formData.agreeToTerms
       })
 
+      track('User Registered')
+
       // Success - redirect to onboarding
       router.push('/onboarding')
     } catch (error: any) {
+      track('Registration Failed', { error: error.message })
       setGeneralError(error.message || 'Ошибка регистрации. Попробуйте снова.')
     } finally {
       setLoading(false)

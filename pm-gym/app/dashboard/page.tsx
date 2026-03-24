@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import PlatformLayout from '@/components/platform/PlatformLayout'
 import Link from 'next/link'
+import { identifyUser } from '@/lib/amplitude'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -22,6 +23,7 @@ export default function DashboardPage() {
       try {
         const response = await userApi.getMe()
         setUser(response.user)
+        identifyUser(response.user.id, { email: response.user.email, name: response.user.name })
       } catch (error) {
         console.error('Failed to load user:', error)
         const userData = authApi.getCurrentUser()
