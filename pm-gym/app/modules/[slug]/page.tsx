@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import PlatformLayout from '@/components/platform/PlatformLayout'
 import Link from 'next/link'
+import { track } from '@/lib/amplitude'
 
 // Mock module data
 const moduleData: any = {
@@ -121,6 +122,19 @@ export default function ModulePage() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'lessons' | 'practice' | 'resources'>('overview')
+  const prevTab = useRef<string>('overview')
+
+  const handleTabChange = (tab: 'overview' | 'lessons' | 'practice' | 'resources') => {
+    if (tab !== activeTab) {
+      track('Module Tab Switched', {
+        module_slug: slug,
+        from_tab: activeTab,
+        to_tab: tab,
+      })
+      prevTab.current = activeTab
+    }
+    setActiveTab(tab)
+  }
 
   useEffect(() => {
     const loadUser = async () => {
@@ -145,6 +159,25 @@ export default function ModulePage() {
     
     loadUser()
   }, [router])
+
+  // Track Module Viewed after data is loaded
+  useEffect(() => {
+    if (!loading && slug) {
+      const mod = moduleData[slug]
+      if (mod) {
+        track('Module Viewed', {
+          module_slug: mod.slug,
+          module_title: mod.title,
+          module_difficulty: mod.difficulty,
+          module_progress_pct: mod.progress,
+          user_module_status: mod.progress === 0 ? 'not_started' : mod.progress === 100 ? 'completed' : 'in_progress',
+          is_featured: mod.featured ?? false,
+          estimated_hours: mod.estimatedHours,
+          lessons_count: mod.lessonsCount,
+        })
+      }
+    }
+  }, [loading, slug])
 
   if (loading || !user) {
     return (
@@ -215,25 +248,25 @@ export default function ModulePage() {
         <div className="flex gap-8">
           <TabButton
             active={activeTab === 'overview'}
-            onClick={() => setActiveTab('overview')}
+            onClick={() => handleTabChange('overview')}
             icon="📚"
             label="Обзор"
           />
           <TabButton
             active={activeTab === 'lessons'}
-            onClick={() => setActiveTab('lessons')}
+            onClick={() => handleTabChange('lessons')}
             icon="📖"
             label="Lessons"
           />
           <TabButton
             active={activeTab === 'practice'}
-            onClick={() => setActiveTab('practice')}
+            onClick={() => handleTabChange('practice')}
             icon="🧪"
             label="Practice"
           />
           <TabButton
             active={activeTab === 'resources'}
-            onClick={() => setActiveTab('resources')}
+            onClick={() => handleTabChange('resources')}
             icon="📚"
             label="Resources"
           />

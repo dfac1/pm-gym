@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { track } from '@/lib/amplitude'
 
 export default function FinalCTA() {
   return (
@@ -19,6 +20,7 @@ export default function FinalCTA() {
           
           <Link 
             href="/register"
+            onClick={() => track('CTA Clicked', { cta_text: 'Начать →', cta_location: 'final_cta', destination: '/register' })}
             className="inline-flex items-center px-10 py-5 text-lg font-semibold text-primary bg-white hover:bg-gray-50 rounded-lg transition-all transform hover:-translate-y-1 shadow-xl hover:shadow-2xl no-underline"
           >
             Начать →

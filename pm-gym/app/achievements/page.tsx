@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import PlatformLayout from '@/components/platform/PlatformLayout'
+import { track } from '@/lib/amplitude'
 
 // Mock achievements data
 const achievements = [
@@ -78,6 +79,17 @@ export default function AchievementsPage() {
     loadUser()
   }, [router])
 
+  useEffect(() => {
+    if (!loading && user) {
+      const unlocked = achievements.filter(a => a.status === 'unlocked').length
+      track('Achievements Page Viewed', {
+        total_unlocked: unlocked,
+        total_achievements: achievements.length,
+        completion_pct: Math.round((unlocked / achievements.length) * 100),
+      })
+    }
+  }, [loading, user])
+
   if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -143,7 +155,7 @@ export default function AchievementsPage() {
             Все ({achievements.length})
           </button>
           <button
-            onClick={() => setFilter('unlocked')}
+            onClick={() => { setFilter('unlocked'); track('Achievement Filter Applied', { filter_type: 'status', filter_value: 'unlocked', results_count: achievements.filter(a => a.status === 'unlocked').length }) }}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               filter === 'unlocked'
                 ? 'bg-indigo-600 text-white'
@@ -153,7 +165,7 @@ export default function AchievementsPage() {
             Получено ({unlockedCount})
           </button>
           <button
-            onClick={() => setFilter('locked')}
+            onClick={() => { setFilter('locked'); track('Achievement Filter Applied', { filter_type: 'status', filter_value: 'locked', results_count: achievements.filter(a => a.status === 'locked').length }) }}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               filter === 'locked'
                 ? 'bg-indigo-600 text-white'
@@ -169,7 +181,16 @@ export default function AchievementsPage() {
           {['all', 'learning', 'scenario', 'streak', 'time', 'social', 'special'].map(cat => (
             <button
               key={cat}
-              onClick={() => setCategoryFilter(cat)}
+              onClick={() => {
+                setCategoryFilter(cat)
+                if (cat !== 'all') {
+                  const results = achievements.filter(a => {
+                    const statusMatch = filter === 'all' || a.status === filter
+                    return statusMatch && a.category === cat
+                  }).length
+                  track('Achievement Filter Applied', { filter_type: 'category', filter_value: cat, results_count: results })
+                }
+              }}
               className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                 categoryFilter === cat
                   ? 'bg-indigo-100 text-indigo-700'
@@ -194,7 +215,10 @@ export default function AchievementsPage() {
                 <div
                   key={achievement.id}
                   className="flex-shrink-0 bg-white/10 backdrop-blur-sm rounded-lg p-4 hover:bg-white/20 transition-all cursor-pointer"
-                  onClick={() => setSelectedAchievement(achievement)}
+                  onClick={() => {
+                    setSelectedAchievement(achievement)
+                    track('Achievement Viewed', { achievement_slug: String(achievement.id), achievement_title: achievement.title, achievement_status: achievement.status, rarity: achievement.rarity, source: 'recent_strip' })
+                  }}
                 >
                   <div className="text-4xl mb-2">{achievement.icon}</div>
                   <div className="text-sm font-medium">{achievement.title}</div>
@@ -254,7 +278,10 @@ export default function AchievementsPage() {
           {filteredAchievements.map(achievement => (
             <div
               key={achievement.id}
-              onClick={() => setSelectedAchievement(achievement)}
+              onClick={() => {
+                setSelectedAchievement(achievement)
+                track('Achievement Viewed', { achievement_slug: String(achievement.id), achievement_title: achievement.title, achievement_status: achievement.status, rarity: achievement.rarity, source: 'grid' })
+              }}
               className={`cursor-pointer hover:scale-105 transition-transform ${
                 achievement.status === 'locked' ? 'opacity-50' : ''
               }`}

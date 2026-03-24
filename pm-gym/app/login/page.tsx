@@ -7,7 +7,14 @@ import AuthLayout from '@/components/auth/AuthLayout'
 import Input from '@/components/auth/Input'
 import Button from '@/components/auth/Button'
 import SocialAuthButtons from '@/components/auth/SocialAuthButtons'
-import { track, identifyUser } from '@/lib/amplitude'
+import { track, identifyUser, setGlobalContext } from '@/lib/amplitude'
+
+function classifyLoginError(message: string): string {
+  if (message.includes('неверный') || message.includes('invalid') || message.includes('incorrect')) return 'invalid_credentials'
+  if (message.includes('подтверди') || message.includes('verified') || message.includes('verify')) return 'email_not_verified'
+  if (message.includes('не найден') || message.includes('not found')) return 'account_not_found'
+  return 'server_error'
+}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -79,14 +86,37 @@ export default function LoginPage() {
       })
 
       if (response.user) {
-        identifyUser(response.user.id, { email: response.user.email, name: response.user.name })
+        const user = response.user
+        const daysSinceLast = user.lastLoginAt
+          ? Math.floor((Date.now() - new Date(user.lastLoginAt).getTime()) / 86400000)
+          : null
+
+        identifyUser(user.id, {
+          email: user.email,
+          name: user.name,
+          email_verified: !!user.emailVerified,
+          plan: user.plan ?? 'free',
+        })
+        setGlobalContext({
+          user_plan: user.plan ?? 'free',
+          onboarding_completed: !!(user.role && user.goal),
+        })
+
+        track('User Logged In', {
+          login_method: 'email',
+          remember_me: formData.rememberMe,
+          is_first_login: !user.lastLoginAt,
+          ...(daysSinceLast !== null ? { days_since_last_login: daysSinceLast } : {}),
+        })
       }
-      track('User Logged In')
 
       // Redirect to dashboard
       router.push('/dashboard')
     } catch (error: any) {
-      track('Login Failed', { error: error.message })
+      track('Login Failed', {
+        error_type: classifyLoginError(error.message),
+        error_message: error.message,
+      })
       setGeneralError(error.message || 'Неверный email или пароль')
     } finally {
       setLoading(false)

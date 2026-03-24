@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import PlatformLayout from '@/components/platform/PlatformLayout'
 import Link from 'next/link'
+import { track } from '@/lib/amplitude'
 
 // Mock resources data
 const resources = [
@@ -188,6 +189,14 @@ export default function LibraryPage() {
     loadUser()
   }, [router])
 
+  // Track Library Viewed after load
+  useEffect(() => {
+    if (!loading && user) {
+      track('Library Viewed', { source: 'sidebar', total_resources_shown: resources.length })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user])
+
   if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -263,7 +272,13 @@ export default function LibraryPage() {
             {['all', 'template', 'tool', 'checklist', 'guide'].map(type => (
               <button
                 key={type}
-                onClick={() => setTypeFilter(type)}
+                onClick={() => {
+                  if (type !== typeFilter) {
+                    const results = resources.filter(r => type === 'all' || r.type === type)
+                    track('Library Filter Applied', { filter_type: 'type', filter_value: type, results_count: results.length, previous_filter_value: typeFilter })
+                  }
+                  setTypeFilter(type)
+                }}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   typeFilter === type
                     ? 'bg-indigo-600 text-white'
@@ -282,7 +297,13 @@ export default function LibraryPage() {
             {['all', 'analytics', 'artifacts', 'frameworks', 'planning', 'research'].map(cat => (
               <button
                 key={cat}
-                onClick={() => setCategoryFilter(cat)}
+                onClick={() => {
+                  if (cat !== categoryFilter) {
+                    const results = resources.filter(r => cat === 'all' || r.category === cat)
+                    track('Library Filter Applied', { filter_type: 'category', filter_value: cat, results_count: results.length, previous_filter_value: categoryFilter })
+                  }
+                  setCategoryFilter(cat)
+                }}
                 className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
                   categoryFilter === cat
                     ? 'bg-indigo-100 text-indigo-700'
@@ -377,7 +398,10 @@ export default function LibraryPage() {
 // Featured Resource Card
 function FeaturedResourceCard({ resource, getTypeIcon }: any) {
   return (
-    <Link href={resource.url}>
+    <Link
+      href={resource.url}
+      onClick={() => track('Resource Clicked', { resource_id: String(resource.id), resource_title: resource.title, resource_type: resource.type, resource_format: resource.format?.toLowerCase().replace(' ', '_'), resource_category: resource.category, is_featured: true, is_external: resource.url !== '#' && !resource.url.startsWith('/'), source: 'library_page' })}
+    >
       <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-xl p-6 text-white hover:shadow-2xl transition-all cursor-pointer h-full">
         <div className="text-5xl mb-4">{getTypeIcon(resource.type)}</div>
         <h3 className="text-xl font-bold mb-2">{resource.title}</h3>
@@ -394,7 +418,10 @@ function FeaturedResourceCard({ resource, getTypeIcon }: any) {
 // Regular Resource Card
 function ResourceCard({ resource, getTypeIcon, getTypeLabel }: any) {
   return (
-    <Link href={resource.url}>
+    <Link
+      href={resource.url}
+      onClick={() => track('Resource Clicked', { resource_id: String(resource.id), resource_title: resource.title, resource_type: resource.type, resource_format: resource.format?.toLowerCase().replace(' ', '_'), resource_category: resource.category, is_featured: resource.featured ?? false, is_external: resource.url !== '#' && !resource.url.startsWith('/'), source: 'library_page' })}
+    >
       <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-all cursor-pointer h-full flex flex-col">
         <div className="flex items-start justify-between mb-4">
           <span className="text-4xl">{getTypeIcon(resource.type)}</span>
@@ -412,6 +439,7 @@ function ResourceCard({ resource, getTypeIcon, getTypeLabel }: any) {
             <button
               onClick={(e) => {
                 e.preventDefault()
+                track('Resource Bookmarked', { resource_id: String(resource.id), resource_type: resource.type, resource_title: resource.title, source: 'library_page' })
                 alert('Добавлено в закладки!')
               }}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"

@@ -1,8 +1,9 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import PlatformLayout from '@/components/platform/PlatformLayout';
+import { track } from '@/lib/amplitude';
 
 // Типы для сценариев
 interface Metric {
@@ -63,6 +64,11 @@ export default function ScenarioPage() {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [activeTab, setActiveTab] = useState<'context' | 'changelog' | 'metrics'>('context');
+  const [attemptNumber, setAttemptNumber] = useState(1);
+  const [tabsViewed, setTabsViewed] = useState<string[]>(['context']);
+
+  const pageOpenTime = useRef(Date.now());
+  const optionSelectTime = useRef<number | null>(null);
 
   useEffect(() => {
     // Загружаем сценарий из JSON (позже заменим на API)
@@ -72,6 +78,17 @@ export default function ScenarioPage() {
         const foundScenario = data.scenarios.find((s: ScenarioData) => s.id === params.id);
         if (foundScenario) {
           setScenario(foundScenario);
+          pageOpenTime.current = Date.now();
+          track('Scenario Started', {
+            scenario_id: foundScenario.id,
+            scenario_title: foundScenario.title,
+            category: foundScenario.category,
+            difficulty: foundScenario.difficulty,
+            tags: foundScenario.tags,
+            estimated_time_min: foundScenario.estimatedTime,
+            attempt_number: 1,
+            is_first_attempt: true,
+          });
         }
       })
       .catch(err => console.error('Error loading scenario:', err));
@@ -92,18 +109,75 @@ export default function ScenarioPage() {
 
   const handleOptionSelect = (optionId: string) => {
     if (!showResult) {
+      if (!selectedOption) {
+        optionSelectTime.current = Date.now();
+      }
       setSelectedOption(optionId);
+      if (scenario) {
+        const option = scenario.options.find(o => o.id === optionId);
+        track('Scenario Option Selected', {
+          scenario_id: scenario.id,
+          option_id: optionId,
+          option_type: option?.type ?? 'unknown',
+          attempt_number: attemptNumber,
+          time_to_select_sec: Math.round((Date.now() - pageOpenTime.current) / 1000),
+          tabs_viewed_before_select: tabsViewed,
+        });
+      }
     }
   };
 
   const handleSubmit = () => {
-    if (selectedOption) {
+    if (selectedOption && scenario) {
+      const option = scenario.options.find(o => o.id === selectedOption);
+      const isBest = selectedOption === scenario.bestAnswer.optionId;
+      const consequence = scenario.consequences[option?.type ?? ''];
+      const timeToDecide = Math.round((Date.now() - pageOpenTime.current) / 1000);
+
+      track('Scenario Submitted', {
+        scenario_id: scenario.id,
+        scenario_title: scenario.title,
+        selected_option_id: selectedOption,
+        selected_option_type: option?.type ?? 'unknown',
+        is_best_answer: isBest,
+        score: consequence?.score ?? 0,
+        consequence_verdict: isBest ? 'correct' : (consequence?.score ?? 0) >= 7 ? 'partial' : 'wrong',
+        time_to_decide_sec: timeToDecide,
+        attempt_number: attemptNumber,
+        $insert_id: `scenario_${scenario.id}_attempt${attemptNumber}`,
+      });
+
+      track('Scenario Completed', {
+        scenario_id: scenario.id,
+        scenario_title: scenario.title,
+        category: scenario.category,
+        difficulty: scenario.difficulty,
+        is_best_answer: isBest,
+        score: consequence?.score ?? 0,
+        grade: isBest ? 'A' : (consequence?.score ?? 0) >= 7 ? 'B' : (consequence?.score ?? 0) >= 5 ? 'C' : 'D',
+        time_spent_sec: timeToDecide,
+        attempt_number: attemptNumber,
+      });
+
       setShowResult(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const handleReset = () => {
+    if (scenario) {
+      const option = scenario.options.find(o => o.id === selectedOption);
+      const prevConsequence = selectedOption ? scenario.consequences[option?.type ?? ''] : null;
+      track('Scenario Restarted', {
+        scenario_id: scenario.id,
+        previous_score: prevConsequence?.score ?? 0,
+        previous_is_best_answer: selectedOption === scenario.bestAnswer.optionId,
+        previous_attempt_number: attemptNumber,
+      });
+    }
+    setAttemptNumber(prev => prev + 1);
+    setTabsViewed(['context']);
+    pageOpenTime.current = Date.now();
     setSelectedOption(null);
     setShowResult(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -253,7 +327,13 @@ export default function ScenarioPage() {
           <div className="border-b">
             <div className="flex">
               <button
-                onClick={() => setActiveTab('context')}
+                onClick={() => {
+                if (activeTab !== 'context') {
+                  track('Scenario Tab Switched', { scenario_id: scenario.id, from_tab: activeTab, to_tab: 'context' });
+                }
+                setActiveTab('context');
+                setTabsViewed(prev => prev.includes('context') ? prev : [...prev, 'context']);
+              }}
                 className={`px-6 py-3 font-medium transition-colors ${
                   activeTab === 'context' 
                     ? 'text-blue-600 border-b-2 border-blue-600' 
@@ -263,7 +343,13 @@ export default function ScenarioPage() {
                 📋 Контекст
               </button>
               <button
-                onClick={() => setActiveTab('changelog')}
+                onClick={() => {
+                if (activeTab !== 'changelog') {
+                  track('Scenario Tab Switched', { scenario_id: scenario.id, from_tab: activeTab, to_tab: 'changelog' });
+                }
+                setActiveTab('changelog');
+                setTabsViewed(prev => prev.includes('changelog') ? prev : [...prev, 'changelog']);
+              }}
                 className={`px-6 py-3 font-medium transition-colors ${
                   activeTab === 'changelog' 
                     ? 'text-blue-600 border-b-2 border-blue-600' 
@@ -273,7 +359,13 @@ export default function ScenarioPage() {
                 🔄 Что было сделано ({scenario.changelog.length})
               </button>
               <button
-                onClick={() => setActiveTab('metrics')}
+                onClick={() => {
+                if (activeTab !== 'metrics') {
+                  track('Scenario Tab Switched', { scenario_id: scenario.id, from_tab: activeTab, to_tab: 'metrics' });
+                }
+                setActiveTab('metrics');
+                setTabsViewed(prev => prev.includes('metrics') ? prev : [...prev, 'metrics']);
+              }}
                 className={`px-6 py-3 font-medium transition-colors ${
                   activeTab === 'metrics' 
                     ? 'text-blue-600 border-b-2 border-blue-600' 

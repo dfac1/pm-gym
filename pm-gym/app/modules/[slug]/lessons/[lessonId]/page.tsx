@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import PlatformLayout from '@/components/platform/PlatformLayout'
 import Link from 'next/link'
+import { track } from '@/lib/amplitude'
 
 // Mock lesson data
 const lessonData: any = {
@@ -128,6 +129,10 @@ export default function LessonPage() {
   const [loading, setLoading] = useState(true)
   const [scrollProgress, setScrollProgress] = useState(0)
   const [completed, setCompleted] = useState(false)
+  const [maxScrollDepth, setMaxScrollDepth] = useState(0)
+
+  const lessonStartTime = useRef(Date.now())
+  const completedFiredRef = useRef(false)
 
   useEffect(() => {
     const loadUser = async () => {
@@ -153,6 +158,28 @@ export default function LessonPage() {
     loadUser()
   }, [router])
 
+  // Track Lesson Started once user & lesson data are ready
+  useEffect(() => {
+    if (!loading && user && lessonId) {
+      const lesson = lessonData[lessonId]
+      if (lesson) {
+        track('Lesson Started', {
+          lesson_id: lesson.id,
+          lesson_slug: lesson.id,
+          lesson_title: lesson.title,
+          lesson_number: lesson.number,
+          lesson_type: lesson.lessonType ?? 'text',
+          estimated_duration_min: lesson.duration,
+          module_slug: slug,
+          is_first_time: true,
+          previous_status: 'not_started',
+        })
+        lessonStartTime.current = Date.now()
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user])
+
   // Track scroll progress
   useEffect(() => {
     const handleScroll = () => {
@@ -163,10 +190,29 @@ export default function LessonPage() {
       const progress = (scrollTop / trackLength) * 100
       
       setScrollProgress(Math.min(progress, 100))
+      setMaxScrollDepth((prev) => Math.max(prev, Math.min(progress, 100)))
       
       // Auto-complete when scrolled to bottom
       if (progress > 95 && !completed) {
         setCompleted(true)
+        if (!completedFiredRef.current) {
+          completedFiredRef.current = true
+          const lesson = lessonData[lessonId]
+          if (lesson) {
+            track('Lesson Completed', {
+              lesson_id: lesson.id,
+              lesson_title: lesson.title,
+              lesson_number: lesson.number,
+              lesson_type: lesson.lessonType ?? 'text',
+              module_slug: slug,
+              completion_method: 'scroll_auto',
+              time_spent_sec: Math.round((Date.now() - lessonStartTime.current) / 1000),
+              max_scroll_depth_pct: Math.round(progress),
+              is_first_completion: true,
+              $insert_id: `lesson_${lesson.id}_${slug}`,
+            })
+          }
+        }
       }
     }
 
@@ -272,7 +318,26 @@ export default function LessonPage() {
         <div className="mt-12 pt-8 border-t border-gray-200">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => setCompleted(true)}
+              onClick={() => {
+                if (!completed) {
+                  setCompleted(true)
+                  if (!completedFiredRef.current) {
+                    completedFiredRef.current = true
+                    track('Lesson Completed', {
+                      lesson_id: lesson.id,
+                      lesson_title: lesson.title,
+                      lesson_number: lesson.number,
+                      lesson_type: lesson.lessonType ?? 'text',
+                      module_slug: slug,
+                      completion_method: 'button_click',
+                      time_spent_sec: Math.round((Date.now() - lessonStartTime.current) / 1000),
+                      max_scroll_depth_pct: Math.round(maxScrollDepth),
+                      is_first_completion: true,
+                      $insert_id: `lesson_${lesson.id}_${slug}`,
+                    })
+                  }
+                }
+              }}
               className={`px-6 py-3 rounded-lg font-semibold transition-all ${
                 completed
                   ? 'bg-green-100 text-green-700 cursor-default'
@@ -286,6 +351,7 @@ export default function LessonPage() {
               {lesson.prevLesson && (
                 <Link
                   href={`/modules/${slug}/lessons/${lesson.prevLesson}`}
+                  onClick={() => track('Lesson Navigation Clicked', { direction: 'prev', lesson_id: lesson.id, module_slug: slug, lesson_completion_status: completed ? 'completed' : 'in_progress' })}
                   className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:border-gray-400 transition-colors"
                 >
                   ← Previous
@@ -294,6 +360,7 @@ export default function LessonPage() {
               {lesson.nextLesson && (
                 <Link
                   href={`/modules/${slug}/lessons/${lesson.nextLesson}`}
+                  onClick={() => track('Lesson Navigation Clicked', { direction: 'next', lesson_id: lesson.id, module_slug: slug, lesson_completion_status: completed ? 'completed' : 'in_progress' })}
                   className="px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
                 >
                   Next: Lesson {lesson.number.split('.')[0]}.{parseInt(lesson.number.split('.')[1]) + 1} →

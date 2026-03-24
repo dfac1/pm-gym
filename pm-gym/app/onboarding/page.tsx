@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Button from '@/components/auth/Button'
+import { track, identifyUser } from '@/lib/amplitude'
 
 interface OnboardingData {
   role: string
@@ -19,6 +20,13 @@ export default function OnboardingPage() {
     interests: [],
     goal: ''
   })
+
+  const onboardingStartTime = useRef(Date.now())
+  const stepStartTime = useRef(Date.now())
+
+  useEffect(() => {
+    track('Onboarding Started')
+  }, [])
 
   const roles = [
     { value: 'student', label: 'Студент / Начинающий', icon: '🎓' },
@@ -56,7 +64,23 @@ export default function OnboardingPage() {
     }))
   }
 
+  const stepNames: Record<number, string> = { 1: 'role', 2: 'interests', 3: 'goal' }
+
   const handleNext = () => {
+    const now = Date.now()
+    const timeOnStep = Math.round((now - stepStartTime.current) / 1000)
+    const totalSoFar = Math.round((now - onboardingStartTime.current) / 1000)
+    const selectedValue = step === 1 ? data.role : step === 2 ? data.interests : data.goal
+
+    track('Onboarding Step Completed', {
+      step,
+      step_name: stepNames[step],
+      selected_value: selectedValue,
+      time_spent_on_step_sec: timeOnStep,
+      total_time_so_far_sec: totalSoFar,
+    })
+
+    stepStartTime.current = now
     if (step < 3) {
       setStep(step + 1)
     } else {
@@ -73,7 +97,28 @@ export default function OnboardingPage() {
         interests: data.interests,
         goal: data.goal
       })
-      
+
+      const totalTimeSec = Math.round((Date.now() - onboardingStartTime.current) / 1000)
+      track('Onboarding Completed', {
+        role: data.role,
+        interests: data.interests,
+        interests_count: data.interests.length,
+        goal: data.goal,
+        total_time_sec: totalTimeSec,
+      })
+
+      // Persist role/goal as setOnce user properties
+      const { authApi } = await import('@/lib/api')
+      const currentUser = authApi.getCurrentUser()
+      if (currentUser?.id) {
+        identifyUser(currentUser.id, {
+          role: { value: data.role, operation: 'setOnce' },
+          goal: { value: data.goal, operation: 'setOnce' },
+          interests: data.interests,
+          onboarding_completed: true,
+        })
+      }
+
       // Redirect to dashboard
       router.push('/dashboard')
     } catch (error) {
@@ -84,6 +129,12 @@ export default function OnboardingPage() {
   }
 
   const handleSkip = () => {
+    track('Onboarding Skipped', {
+      skipped_at_step: step,
+      steps_completed: step - 1,
+      partial_role: data.role || null,
+      time_spent_sec: Math.round((Date.now() - onboardingStartTime.current) / 1000),
+    })
     router.push('/dashboard')
   }
 

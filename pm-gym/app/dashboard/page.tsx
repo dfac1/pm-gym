@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import PlatformLayout from '@/components/platform/PlatformLayout'
 import Link from 'next/link'
-import { identifyUser } from '@/lib/amplitude'
+import { identifyUser, setGlobalContext, track } from '@/lib/amplitude'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -23,7 +23,21 @@ export default function DashboardPage() {
       try {
         const response = await userApi.getMe()
         setUser(response.user)
-        identifyUser(response.user.id, { email: response.user.email, name: response.user.name })
+        const u = response.user
+        identifyUser(u.id, {
+          email: u.email,
+          name: u.name,
+          email_verified: !!u.emailVerified,
+          plan: u.plan ?? 'free',
+          role: u.role ? { value: u.role, operation: 'setOnce' } : undefined,
+          goal: u.goal ? { value: u.goal, operation: 'setOnce' } : undefined,
+          interests: u.interests ? JSON.parse(u.interests) : undefined,
+          onboarding_completed: !!(u.role && u.goal),
+        } as any)
+        setGlobalContext({
+          user_plan: u.plan ?? 'free',
+          onboarding_completed: !!(u.role && u.goal),
+        })
       } catch (error) {
         console.error('Failed to load user:', error)
         const userData = authApi.getCurrentUser()
@@ -91,6 +105,7 @@ export default function DashboardPage() {
             category="Приоритизация"
             duration="20 min"
             href="/library/rice-calculator"
+            position={1}
           />
           <RecommendationCard
             icon="📝"
@@ -98,6 +113,7 @@ export default function DashboardPage() {
             category="Артефакты"
             duration="30 min"
             href="/modules/product-artifacts/lessons/prd-writing"
+            position={2}
           />
           <RecommendationCard
             icon="🎯"
@@ -105,6 +121,7 @@ export default function DashboardPage() {
             category="Стратегия"
             duration="25 min"
             href="/modules/frameworks-tools/lessons/okrs"
+            position={3}
           />
         </div>
       </div>
@@ -160,6 +177,7 @@ function VerificationBanner({ user }: { user: any }) {
     try {
       const { userApi } = await import('@/lib/api')
       const response = await userApi.resendVerification()
+      track('Verification Email Resent', { source: 'dashboard_banner' })
       setMessage(response.message || 'Письмо отправлено!')
     } catch (error: any) {
       setMessage(error.message || 'Ошибка при отправке письма')
@@ -306,6 +324,7 @@ function ContinueLearningCard() {
         
         <Link
           href="/modules/analytics-metrics/lessons/cohort-analysis"
+          onClick={() => track('Continue Learning Clicked', { module_slug: 'analytics-metrics', lesson_slug: 'cohort-analysis', lesson_number: '1.3', module_progress_pct: 60 })}
           className="ml-4 px-6 py-3 bg-white text-indigo-600 rounded-lg font-semibold hover:shadow-lg transition-all"
         >
           Продолжить →
@@ -322,11 +341,15 @@ interface RecommendationCardProps {
   category: string
   duration: string
   href: string
+  position: number
 }
 
-function RecommendationCard({ icon, title, category, duration, href }: RecommendationCardProps) {
+function RecommendationCard({ icon, title, category, duration, href, position }: RecommendationCardProps) {
   return (
-    <Link href={href}>
+    <Link
+      href={href}
+      onClick={() => track('Recommendation Clicked', { recommendation_title: title, recommendation_category: category, recommendation_type: 'lesson', destination: href, position })}
+    >
       <div className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl transition-all cursor-pointer h-full">
         <div className="text-5xl mb-4">{icon}</div>
         <h4 className="text-lg font-semibold text-gray-900 mb-1">{title}</h4>

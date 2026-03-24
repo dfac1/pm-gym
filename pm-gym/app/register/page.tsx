@@ -8,7 +8,13 @@ import Input from '@/components/auth/Input'
 import Button from '@/components/auth/Button'
 import SocialAuthButtons from '@/components/auth/SocialAuthButtons'
 import PasswordStrength from '@/components/auth/PasswordStrength'
-import { track } from '@/lib/amplitude'
+import { track, getUtmParams, identifyUser } from '@/lib/amplitude'
+
+function classifyRegistrationError(message: string): string {
+  if (message.includes('зарегистрирован') || message.includes('already') || message.includes('exists')) return 'email_already_exists'
+  if (message.includes('validation') || message.includes('обязател')) return 'validation_error'
+  return 'server_error'
+}
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -86,19 +92,36 @@ export default function RegisterPage() {
     try {
       const { authApi } = await import('@/lib/api')
       
-      await authApi.register({
+      const response = await authApi.register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
         agreeToTerms: formData.agreeToTerms
       })
 
-      track('User Registered')
+      if (response.user) {
+        identifyUser(response.user.id, {
+          email: response.user.email,
+          name: response.user.name,
+          email_verified: false,
+          plan: 'free',
+          registration_date: { value: new Date().toISOString().split('T')[0], operation: 'setOnce' },
+        })
+      }
+
+      const utms = getUtmParams()
+      track('User Registered', {
+        registration_method: 'email',
+        ...utms,
+      })
 
       // Success - redirect to onboarding
       router.push('/onboarding')
     } catch (error: any) {
-      track('Registration Failed', { error: error.message })
+      track('Registration Failed', {
+        error_type: classifyRegistrationError(error.message),
+        error_message: error.message,
+      })
       setGeneralError(error.message || 'Ошибка регистрации. Попробуйте снова.')
     } finally {
       setLoading(false)

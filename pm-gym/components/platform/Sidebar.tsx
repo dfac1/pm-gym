@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { track } from '@/lib/amplitude'
 
 // Module definitions
 const modules = [
@@ -136,6 +137,7 @@ export default function Sidebar({ user }: SidebarProps) {
                 <Link
                   key={module.id}
                   href={`/modules/${module.slug}`}
+                  onClick={() => track('Sidebar Nav Clicked', { destination: `/modules/${module.slug}`, label: module.title, current_page: pathname })}
                   className={`
                     block px-3 py-2 rounded-lg text-sm transition-colors
                     ${isActive(`/modules/${module.slug}`)
@@ -252,9 +254,11 @@ interface NavItemProps {
 }
 
 function NavItem({ href, icon, label, active, badge }: NavItemProps) {
+  const pathname = usePathname()
   return (
     <Link
       href={href}
+      onClick={() => track('Sidebar Nav Clicked', { destination: href, label, current_page: pathname })}
       className={`
         flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors
         ${active
@@ -284,9 +288,11 @@ interface NavIconButtonProps {
 }
 
 function NavIconButton({ href, icon, active, tooltip }: NavIconButtonProps) {
+  const pathname = usePathname()
   return (
     <Link
       href={href}
+      onClick={() => track('Sidebar Nav Clicked', { destination: href, label: tooltip, current_page: pathname })}
       className={`
         w-12 h-12 flex items-center justify-center rounded-lg transition-colors group relative
         ${active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-100'}

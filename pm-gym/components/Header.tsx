@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { track } from '@/lib/amplitude'
 
 export default function Header() {
   return (
@@ -24,6 +25,7 @@ export default function Header() {
             </Link>
             <Link 
               href="/register"
+              onClick={() => track('CTA Clicked', { cta_text: 'Начать →', cta_location: 'header', destination: '/register' })}
               className="px-6 py-2 text-sm font-semibold text-white bg-primary hover:bg-primary-hover rounded-lg transition-all no-underline hover:no-underline transform hover:-translate-y-0.5"
             >
               Начать →

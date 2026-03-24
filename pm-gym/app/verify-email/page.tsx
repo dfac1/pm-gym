@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import AuthLayout from '@/components/auth/AuthLayout'
+import { track } from '@/lib/amplitude'
 
 function VerifyEmailContent() {
   const router = useRouter()
@@ -26,7 +27,7 @@ function VerifyEmailContent() {
         if (data.success) {
           setStatus('success')
           setMessage(data.message)
-          
+          track('Email Verified')
           // Redirect to dashboard after 3 seconds
           setTimeout(() => {
             router.push('/dashboard')

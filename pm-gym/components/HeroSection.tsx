@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { track } from '@/lib/amplitude'
 
 export default function HeroSection() {
   return (
@@ -22,6 +23,7 @@ export default function HeroSection() {
             </p>
             <Link 
               href="/register"
+              onClick={() => track('CTA Clicked', { cta_text: 'Начать →', cta_location: 'hero', destination: '/register' })}
               className="inline-flex items-center px-8 py-4 text-lg font-semibold text-white bg-primary hover:bg-primary-hover rounded-lg transition-all transform hover:-translate-y-1 shadow-lg hover:shadow-xl no-underline"
             >
               Начать →

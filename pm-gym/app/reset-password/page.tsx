@@ -6,6 +6,7 @@ import AuthLayout from '@/components/auth/AuthLayout'
 import Input from '@/components/auth/Input'
 import Button from '@/components/auth/Button'
 import PasswordStrength from '@/components/auth/PasswordStrength'
+import { track } from '@/lib/amplitude'
 
 function ResetPasswordForm() {
   const router = useRouter()
@@ -70,6 +71,7 @@ function ResetPasswordForm() {
       
       await authApi.resetPassword(token!, formData.password)
 
+      track('Password Reset Completed')
       // Success
       setSuccess(true)
       

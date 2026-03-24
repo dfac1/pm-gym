@@ -5,6 +5,7 @@ import Link from 'next/link'
 import AuthLayout from '@/components/auth/AuthLayout'
 import Input from '@/components/auth/Input'
 import Button from '@/components/auth/Button'
+import { track } from '@/lib/amplitude'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -38,6 +39,7 @@ export default function ForgotPasswordPage() {
       
       await authApi.forgotPassword(email)
       
+      track('Password Reset Requested')
       // Show success (even if email doesn't exist for security)
       setSuccess(true)
     } catch (error: any) {
